@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sics-lora-test
+  labels:
+    app: sics-lora-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sics-lora-test
+  template:
+    metadata:
+      labels:
+        app: sics-lora-test
+    spec:
+      containers:
+      - name: sics-lora-test
+        image: 136.225.131.250:5000/5g-coral-lora1
+        resources:
+          limits:
+            cpu: "2"
+          requests:
+            cpu: "1"
+        command: ["/scripts/wrapper.sh"]
+        command: ["/bin/bash"]
+        args: ["-ec", "while :; do echo '.'; sleep 5 ; done"]
+       # args: ["./entrypoint/entrypoint.sh"]
+        securityContext:
+          privileged: true
+        ports:
+        - containerPort: 8080
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: sics-lora-test
+  labels:
+    app: sics-lora-test
+spec:
+  type: NodePort
+  ports:
+  - nodePort: 31767
+    port: 8080
+    targetPort: 8080
+  selector:
+    app: sics-lora-test
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: sics-lora-test
+spec:
+  maxReplicas: 1
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: extensions/v1beta1
+    kind: Deployment
+    name: sics-lora-test
+  targetCPUUtilizationPercentage: 90
+

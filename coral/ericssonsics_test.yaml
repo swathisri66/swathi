@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ericssonsics1-deploy-test
+  labels:
+    app: ericssonsics1-test
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ericssonsics1-test
+  template:
+    metadata:
+      labels:
+        app: ericssonsics1-test
+    spec:
+      containers:
+      - name: ericssonsics1-test
+        image: 136.225.131.250:5000/ericssonsics/5g-coral
+       # command: ["/scripts/wrapper.sh"]
+        command: ["/bin/bash"]
+        args: ["-ec", "while :; do echo '.'; sleep 5 ; done"]
+        ports:
+        - name: porta
+          protocol: TCP
+          containerPort: 53001
+        - name: portb
+          protocol: UDP
+          containerPort: 53002
+       # volumeMounts:
+       # - name: wrapper
+       #   mountPath: /scripts
+   #  volumes:
+   #  - name: wrapper
+   #    configMap:
+   #      name: wrapper
+   #      defaultMode: 0744
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: ericssonsics1-service-test
+ # namespace: ericssonsics1-namespace
+  labels:
+    app: ericssonsics1-service-test
+spec:
+  type: NodePort
+  ports:
+  - name: tcp-port
+    port: 53001
+    targetPort: 53001
+    protocol: TCP
+    nodePort: 30999
+  - name: udp-port
+    port: 53002
+    targetPort: 53002
+    protocol: UDP
+    nodePort: 30998  
+  selector:
+    app: ericssonsics1-service-test   

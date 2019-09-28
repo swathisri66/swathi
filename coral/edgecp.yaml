@@ -1,0 +1,144 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sics-edge-test
+  labels:
+    app: sics-edge-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sics-edge-test
+  template:
+    metadata:
+      labels:
+        app: sics-edge-test
+    spec:
+      nodeSelector:
+        nodetype: "1"
+      containers:
+      - name: sics-edge-test
+        image: 136.225.131.250:5000/ericssonsics/5g-coral
+#        resources:
+#          limits:
+#            cpu: "2"
+#          requests:
+#            cpu: "1"
+       # command: ["/scripts/wrapper.sh"]
+        command: ["/bin/bash"]
+#        args: ["-ec", "while :; do echo '.'; sleep 5 ; done"]
+        args: ["./entrypoint/entrypoint.sh"]
+        securityContext:
+          privileged: true
+        ports:
+        - name: porta
+          protocol: TCP
+          containerPort: 53002
+#       - name: portau
+#          protocol: UDP
+#          containerPort: 53002
+        - name: portu
+          protocol: UDP
+          containerPort: 52001
+        - name: http
+          protocol: TCP
+          containerPort: 8080
+        - name: portb
+          protocol: TCP
+          containerPort: 5683
+        - name: portc
+          protocol: TCP
+          containerPort: 5684
+        - name: portssh
+          protocol: TCP
+          containerPort: 22
+        volumeMounts:
+          - name: entrypoint
+            mountPath: /home/user/entrypoint
+            readOnly: true
+      volumes:
+        - name: entrypoint
+          configMap:
+            name: sics-edge-test
+            
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sics-edge-test
+  labels:
+    app: sics-edge-test
+data:
+  entrypoint.sh: |+
+    #!/bin/bash
+    mkdir -p ~/.ssh && chmod 700 ~/.ssh && touch ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys && echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC19pnyt2y8i0rqqxkcjpleI3JV5FkHAJ2y4tRuIbehzn/dBzfbw9ksP0AlH+EIfl51YY7patYAROLfBmM5POeUzVYagwIVPLpENnxibGBZucLaieyvs69J1urneov3D3dPzgWCKW1zBpKVmLbcNBzgm2v8dyybbHOkYuutYTnE8S3TNuBEO2hhkuB/0Bd2XO7ftSyPGJkFcr4d0TODvq0dLE1VOEhm2Vyp0E8VMZFMXaxRuabP4tGSNgk9e4x+3rUD3Uo8bBFXCA7oKqU9o4sF3ajlasqTt6fCtxhlm2vAhgo/DAsDqLcvKXyRT+3iHGxp2THKu5JbplfsJ5uPXBrB user@ericssonsics1-deploy-test-5d7bcc894-m8f68" >> ~/.ssh/authorized_keys
+    sudo sed -i 's/^UsePAM .*/UsePAM no/' /etc/ssh/sshd_config
+    sudo service ssh restart
+    sudo service ssh status
+    while :; do
+        echo 'fd00::212:4b00:14b5:de7c '
+        sleep 5
+    done
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: sics-edge-test
+  labels:
+    app: sics-edge-test
+spec:
+  type: NodePort
+  ports:
+  - name: porta
+    port: 53002
+    targetPort: 53002
+    protocol: TCP
+    nodePort: 53002
+#  - name: portau
+#    port: 53002
+#    targetPort: 53002
+#    protocol: UDP
+#    nodePort: 53002
+  - name: portu
+    port: 52001
+    targetPort: 52001
+    protocol: UDP
+    nodePort: 52001
+  - name: portb
+    port: 5683
+    targetPort: 5683
+    protocol: TCP
+    nodePort: 30683
+  - name: portc
+    port: 5684
+    targetPort: 5684
+    protocol: TCP
+    nodePort: 30684
+  - name: http
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+    nodePort: 30080
+  - name: portssh
+    port: 22
+    targetPort: 22
+    protocol: TCP
+    nodePort: 32122
+  selector:
+    app: sics-edge-test
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: sics-edge-test
+spec:
+  maxReplicas: 1
+  minReplicas: 1	
+  scaleTargetRef:
+    apiVersion: extensions/v1beta1
+    kind: Deployment
+    name: sics-edge-test
+  targetCPUUtilizationPercentage: 90
+
